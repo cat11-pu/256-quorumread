@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>quorumread · 表格台</title>
+<style>
+:root{--accent:#b8551f;--soft:#fde8d8}
+body{margin:0;background:#fbf7ef;color:#23302a;font-family:system-ui,sans-serif}
+header{padding:16px 24px 6px}
+h1{font-size:19px;margin:0 0 4px}
+.hint{color:#6b7a70;font-size:13px;margin:0}
+.bar-top{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 24px;background:#fff;border-top:1px solid #e6e0d2;border-bottom:1px solid #e6e0d2}
+#controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+#controls button{font:inherit;padding:7px 13px;border-radius:8px;border:1px solid #d8d2c2;background:#fff;cursor:pointer}
+#controls button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+#controls input{font:inherit;padding:6px 9px;border-radius:8px;border:1px solid #d8d2c2;width:84px}
+#controls label{font-size:12px;color:#6b7a70}
+main{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;padding:16px 24px 24px;align-items:start}
+#stage{background:#fff;border:1px solid #e6e0d2;border-radius:12px;padding:12px;min-height:300px}
+#stage table{width:100%;border-collapse:collapse;font-size:13px}
+#stage th,#stage td{border-bottom:1px solid #efe9dc;padding:8px 10px;text-align:left}
+#stage tr.odd td{background:#fdfbf6}
+#stage .row{display:flex;gap:10px;padding:7px 4px;border-bottom:1px solid #efe9dc}
+#stage .chip{border-radius:6px;padding:2px 8px;font-size:12px;background:#f1ece0;color:#4a5a50}
+#stage .chip.ok{background:var(--soft);color:#14361f}
+#stage .chip.bad{background:#f6dcd9;color:#7a1c16}
+#stage .bar{height:16px;background:#efe9dc;border-radius:8px;position:relative}
+#stage .bar i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:8px}
+#legend{background:#fff;border:1px solid #e6e0d2;border-radius:12px;padding:12px;font-size:12px;color:#4a5a50}
+pre#out{background:#243027;color:#e7f5ea;border-radius:12px;padding:12px;font-size:12px;margin:14px 24px;overflow:auto}
+#log{color:#6b7a70;font-size:12px;padding:0 24px 12px}
+details{padding:0 24px 30px;color:#6b7a70;font-size:13px}
+textarea{width:100%;height:120px;font-family:ui-monospace,monospace;font-size:12px;border:1px solid #d8d2c2;border-radius:10px;padding:10px;background:#fffdf8}
+#reload{font:inherit;margin-top:8px;padding:7px 14px;border-radius:8px;border:1px solid #d8d2c2;background:#fff;cursor:pointer}
+</style></head>
+<body>
+<header><h1>quorumread · 表格台</h1><p class="hint">点按钮改修复预算、减事件，右边看各副本逐键版本与压在账上的修复请求。</p></header>
+<div class="bar-top"><section id="controls"></section></div>
+<main>
+  <section id="stage"></section>
+  <aside id="legend"></aside>
+</main>
+<pre id="out">还没跑</pre>
+<div id="log"></div>
+
+<details>
+  <summary>场景数据（可以直接改，改完点重新载入）</summary>
+  <textarea id="input">{
+  "reps": 3,
+  "budget": 1,
+  "quorum_error_code": "E_NO_QUORUM",
+  "pending_error_code": "E_NOT_PENDING",
+  "unknown_error_code": "E_UNKNOWN_KEY",
+  "event_error_code": "E_BAD_EVENT",
+  "state": { "reps": { "1": {}, "2": {}, "3": {} }, "pending": [], "healed": [], "applied": [] },
+  "events": [
+    { "id": 1, "kind": "write", "key": "k1", "value": 1, "acks": ["1", "2"] },
+    { "id": 2, "kind": "read", "key": "k1", "from": ["1", "2", "3"] },
+    { "id": 3, "kind": "write", "key": "k2", "value": 1, "acks": ["2", "3"] },
+    { "id": 4, "kind": "read", "key": "k2", "from": ["1", "2", "3"] },
+    { "id": 5, "kind": "repair", "rep": "3", "key": "k1" },
+    { "id": 6, "kind": "read", "key": "k1", "from": ["1", "2"] },
+    { "id": 7, "kind": "repair", "rep": "1", "key": "k2" },
+    { "id": 8, "kind": "write", "key": "k1", "value": 2, "acks": ["1", "3"] },
+    { "id": 9, "kind": "read", "key": "k1", "from": ["1", "2", "3"] },
+    { "id": 10, "kind": "repair", "rep": "2", "key": "k1" }
+  ]
+}</textarea>
+  <button id="reload">重新载入场景</button>
+</details>
+<script type="module">
+import { mount } from "./ui.js";
+
+const parts = {
+  controls: document.getElementById("controls"),
+  stage: document.getElementById("stage"),
+  out: document.getElementById("out"),
+  legend: document.getElementById("legend"),
+  log: document.getElementById("log")
+};
+
+function start(spec) {
+  try {
+    mount(spec, parts);
+  } catch (error) {
+    parts.out.textContent = String(error && error.stack ? error.stack : error);
+  }
+}
+
+document.getElementById("reload").addEventListener("click", function () {
+  try {
+    start(JSON.parse(document.getElementById("input").value));
+  } catch (error) {
+    parts.out.textContent = String(error);
+  }
+});
+
+start(JSON.parse(document.getElementById("input").value));
+</script>
+</body></html>
